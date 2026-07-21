@@ -1,17 +1,16 @@
 {
   "app/page.tsx -> ../components/Viewer": {
-    "id": 5609,
+    "id": "app/page.tsx -> ../components/Viewer",
     "files": [
-      "static/chunks/654.96d144b5935d50e6.js",
-      "static/chunks/609.f3a10c9970754eaf.js"
+      "static/chunks/_app-pages-browser_components_Viewer_tsx.js"
     ]
   },
   "node_modules/@react-three/drei/core/VideoTexture.js -> hls.js": {
-    "id": null,
+    "id": "node_modules/@react-three/drei/core/VideoTexture.js -> hls.js",
     "files": []
   },
   "node_modules/@react-three/drei/web/FaceLandmarker.js -> @mediapipe/tasks-vision": {
-    "id": null,
+    "id": "node_modules/@react-three/drei/web/FaceLandmarker.js -> @mediapipe/tasks-vision",
     "files": []
   }
 }

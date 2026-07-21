@@ -1,6 +1,6 @@
 'use client';
 
-import { Camera, Layers, UploadCloud } from 'lucide-react';
+import { Camera, Layers, UploadCloud, Wand2 } from 'lucide-react';
 import { useCallback, useMemo, useRef } from 'react';
 import type { AecCategory, BIMSnapState } from './types';
 
@@ -89,6 +89,38 @@ export function ProductInputPanel({ state }: Props) {
     [handleImageUpload]
   );
 
+  const handleGenerateMesh = useCallback(async () => {
+    if (!state.imageSrc) return;
+    state.setState({ loading: true });
+    try {
+      const response = await fetch('/api/generate-3d', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          imageBase64: state.imageSrc,
+          width: state.width,
+          height: state.height,
+          depth: state.depth,
+          density: state.density,
+          category: state.category
+        })
+      });
+      const data = await response.json();
+      if (data.result) {
+        state.setState({ generatedMesh: JSON.stringify(data.result) });
+          if (data.hfError) {
+            // notify user that HF inference failed and a fallback was used
+            // eslint-disable-next-line no-alert
+            alert('Hugging Face inference failed; using procedural fallback. Reason: ' + data.hfError);
+          }
+      }
+    } catch (error) {
+      console.error('Failed to generate mesh:', error);
+    } finally {
+      state.setState({ loading: false });
+    }
+  }, [state]);
+
   return (
     <div className="space-y-6">
       <div className="rounded-3xl border border-slate-800 bg-slate-950 p-5 shadow-panel">
@@ -133,6 +165,18 @@ export function ProductInputPanel({ state }: Props) {
           />
         </div>
       </div>
+
+      {state.imageSrc && (
+        <button
+          type="button"
+          disabled={state.loading}
+          onClick={handleGenerateMesh}
+          className="flex w-full items-center justify-center gap-3 rounded-3xl bg-gradient-to-r from-cyan-500 to-blue-500 px-6 py-4 font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50 hover:shadow-lg hover:shadow-cyan-500/25"
+        >
+          <Wand2 className="h-5 w-5" />
+          {state.loading ? 'Generating 3D model...' : 'Generate 3D Model'}
+        </button>
+      )}
 
       <div className="rounded-3xl border border-slate-800 bg-slate-950 p-5 shadow-panel">
         <div className="mb-5 flex items-center gap-3 text-slate-200">

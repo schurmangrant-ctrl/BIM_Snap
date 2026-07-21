@@ -12,8 +12,13 @@ interface Props {
 }
 
 function buildDefaultMesh() {
-  const geometry = new THREE.BoxGeometry(1, 1, 1, 24, 24, 24);
-  const material = new THREE.MeshStandardMaterial({ color: 0x70a5ff, metalness: 0.2, roughness: 0.4 });
+  const geometry = new THREE.BoxGeometry(1, 1, 1, 32, 32, 32);
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x3b82f6,
+    metalness: 0.3,
+    roughness: 0.3,
+    envMapIntensity: 1
+  });
   return new THREE.Mesh(geometry, material);
 }
 
@@ -43,11 +48,50 @@ export default function Viewer({ state }: Props) {
   const [mesh, setMesh] = useState<THREE.Mesh | null>(null);
 
   useEffect(() => {
-    const sourceMesh = buildDefaultMesh();
+    let sourceMesh: THREE.Mesh;
+
+    if (state.generatedMesh) {
+      try {
+        const meshData = JSON.parse(state.generatedMesh);
+        const geometry = new THREE.BufferGeometry();
+        
+        // Add vertices
+        if (meshData.vertices && meshData.vertices.length > 0) {
+          geometry.setAttribute(
+            'position',
+            new THREE.BufferAttribute(new Float32Array(meshData.vertices), 3)
+          );
+        }
+        
+        // Add indices
+        if (meshData.indices && meshData.indices.length > 0) {
+          geometry.setIndex(
+            new THREE.BufferAttribute(new Uint32Array(meshData.indices), 1)
+          );
+        }
+        
+        geometry.computeVertexNormals();
+        
+        const material = new THREE.MeshStandardMaterial({
+          color: 0x06b6d4,
+          metalness: 0.2,
+          roughness: 0.25,
+          side: THREE.DoubleSide
+        });
+        
+        sourceMesh = new THREE.Mesh(geometry, material);
+      } catch (error) {
+        console.error('Failed to parse mesh:', error);
+        sourceMesh = buildDefaultMesh();
+      }
+    } else {
+      sourceMesh = buildDefaultMesh();
+    }
+
     simplifyMesh(sourceMesh, state);
     normalizeScale(sourceMesh, state);
     setMesh(sourceMesh);
-  }, [state.width, state.height, state.depth, state.units, state.density, state.imageSrc]);
+  }, [state.width, state.height, state.depth, state.units, state.density, state.imageSrc, state.generatedMesh]);
 
   const boundingHelper = useMemo(() => {
     if (!mesh || !state.bounding) return null;
@@ -55,22 +99,55 @@ export default function Viewer({ state }: Props) {
     const size = new THREE.Vector3();
     box.getSize(size);
     const geometry = new THREE.BoxGeometry(size.x, size.y, size.z);
-    const material = new THREE.MeshBasicMaterial({ color: 0x10b981, wireframe: true });
+    const material = new THREE.MeshBasicMaterial({
+      color: 0x06b6d4,
+      wireframe: true,
+      opacity: 0.4,
+      transparent: true
+    });
     const helper = new THREE.Mesh(geometry, material);
     helper.position.copy(box.getCenter(new THREE.Vector3()));
     return helper;
   }, [mesh, state.bounding]);
 
   return (
-    <Canvas shadows camera={{ position: [2, 2, 2], fov: 45 }}>
-      <ambientLight intensity={0.45} />
-      <directionalLight position={[5, 10, 5]} intensity={0.8} />
-      <Stage preset="rembrandt" intensity={0.6}>
-        {mesh ? <primitive object={mesh} /> : null}
-        {boundingHelper ? <primitive object={boundingHelper} /> : null}
+    <Canvas
+      shadows
+      camera={{ position: [3, 2.5, 3], fov: 50 }}
+      style={{ width: '100%', height: '100%' }}
+    >
+      <ambientLight intensity={0.6} />
+      <directionalLight position={[8, 12, 8]} intensity={1.2} castShadow shadow-mapSize-width={2048} shadow-mapSize-height={2048} />
+      <directionalLight position={[-5, 8, -5]} intensity={0.4} />
+
+      <Stage
+        adjustCamera={false}
+        intensity={0.8}
+        preset="rembrandt"
+        environment="city"
+      >
+        {mesh && <primitive object={mesh} />}
+        {boundingHelper && <primitive object={boundingHelper} />}
       </Stage>
-      <OrbitControls enablePan enableZoom enableRotate />
-      <Grid args={[10, 10]} sectionColor={0x334155} fadeDistance={30} />
+
+      <OrbitControls
+        enablePan
+        enableZoom
+        enableRotate
+        autoRotate
+        autoRotateSpeed={3}
+      />
+      <Grid
+        args={[15, 15]}
+        cellSize={0.5}
+        cellColor={0x475569}
+        sectionSize={2}
+        sectionColor={0x1e293b}
+        fadeDistance={30}
+        fadeStrength={0.5}
+      />
+
+      <fog attach="fog" args={['#000000', 20, 50]} />
     </Canvas>
   );
 }
